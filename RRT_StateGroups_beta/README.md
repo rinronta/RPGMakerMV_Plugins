@@ -1,5 +1,10 @@
+# 配布元
+[GitHub-rinronta-RPGMakerMV_Plugins-RRT_StateGroups_beta](https://github.com/rinronta/RPGMakerMV_Plugins/blob/master/RRT_StateGroups_beta/RRT_StateGroups_beta.js)
+
+# ライセンス
+MITライセンスで公開します。
+
 # 仕様詳細
-  
 ## ◆設定方法◆
 1. 本プラグインをプラグイン管理に追加してください。
 2. プラグイン設定画面で、グループの各項目を設定します(後述)。
