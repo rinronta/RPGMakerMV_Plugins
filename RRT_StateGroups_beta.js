@@ -5,8 +5,11 @@
 // This software is released under the MIT License.
 // http://opensource.org/licenses/mit-license.php
 // ----------------------------------------------------------------------------
-// Version
-// 0.2.0 2018/05/06 beta版公開
+// 変更履歴
+// v0.2.4 2018/05/09 データベースをリスト形式に統一
+//                   その他、コーディングのミスを修正
+//                   別途オンラインヘルプ作成のためプラグインヘルプ・コメントアウト等を簡略化
+// v0.2.0 2018/05/06 beta版公開
 //=============================================================================
 /*~struct~groupSetting:
  *
@@ -134,227 +137,154 @@
  * @plugindesc ステートグループ化プラグイン
  * @author RINRONTA
  *
- * @param STATE_GROUP1
- * @desc ノートタグ：<RSGgroupId:1>
- * @type struct<groupSetting>
- *
- * @param STATE_GROUP2
- * @desc ノートタグ：<RSGgroupId:2>
- * @type struct<groupSetting>
- *
- * @param STATE_GROUP3
- * @desc ノートタグ：<RSGgroupId:3>
- * @type struct<groupSetting>
- *
- * @param STATE_GROUP4
- * @desc ノートタグ：<RSGgroupId:4>
- * @type struct<groupSetting>
- *
- * @param STATE_GROUP5
- * @desc ノートタグ：<RSGgroupId:5>
- * @type struct<groupSetting>
- *
- * @param STATE_GROUP6
- * @desc ノートタグ：<RSGgroupId:6>
- * @type struct<groupSetting>
- *
- * @param STATE_GROUP7
- * @desc ノートタグ：<RSGgroupId:7>
- * @type struct<groupSetting>
- *
- * @param STATE_GROUP8
- * @desc ノートタグ：<RSGgroupId:8>
- * @type struct<groupSetting>
- *
- * @param STATE_GROUP9
- * @desc ノートタグ：<RSGgroupId:9>
- * @type struct<groupSetting>
- *
- * @param STATE_GROUP10
- * @desc ノートタグ：<RSGgroupId:10>
- * @type struct<groupSetting>
- *
- * @param EXPANSION
+ * @param StateGroups
  * @type struct<groupSetting>[]
- * @desc 11グループ以上が必要の場合、<RSGgroupId:11>からのグループをここで拡張可能。groupId=行番号+10
+ * @desc ステートのデータベースです。行番号がグループIDになります。
  *
  * @help
+ *=============================================================================
+ * RRT_StateGroups_beta
+ * 
+ * 公開元 https://github.com/rinronta/RPGMakerMV_Plugins
+ *=============================================================================
+ * Copyright (c) 2018 RINRONTA
+ * This software is released under the MIT License.
+ * http://opensource.org/licenses/mit-license.php
+ *-----------------------------------------------------------------------------
+ * アップデート履歴
+ *-----------------------------------------------------------------------------
+ * v0.5.0 2018/05/09 ※以前のバージョンとの互換性がなくなります
+ *                   ステートグループのデータベースをリスト形式に統一
+ *                   その他、コーディングのミスを修正
+ *                   オンラインヘルプ作成のためプラグインヘルプをやや簡略化
+ * v0.2.0 2018/05/06 beta版公開
  *-----------------------------------------------------------------------------
  * 概要
  *-----------------------------------------------------------------------------
  * ステートをグループ化させ、条件に従ってグループ内あるいは
  + 他のステートへステートを切り替える仕組みを導入できます。
+ * オンラインヘルプ
+ * https://github.com/rinronta/RPGMakerMV_Plugins/blob/master/ReadMe_RRT_StateGroups_beta.md
  *
  *-----------------------------------------------------------------------------
  * 基本的な設定方法
  *-----------------------------------------------------------------------------
  * 1. 本プラグインをプラグイン管理に追加してください。
  * 
- * 2. プラグイン設定画面で、グループの各項目を設定します(後述)。
+ * 2. プラグイン設定画面で、グループの各項目を設定します。
  *
  * 3. 各ステートの設定画面で<RSGstateGroupId:xx>を入力します。
  *    xxはステートが属すグループIDです。
  *
- * 4. 必要に応じて、ステートの設定画面のメモ欄に規定のノートタグをつけます。
+ * 4. 各ステートの設定画面のメモ欄に、必要に応じて規定のノートタグを記述します。
  *-----------------------------------------------------------------------------
- * グループ設定
+ * 各グループの設定
  *-----------------------------------------------------------------------------
  * ---[name]---
  * ステートの名称です。処理には関わらないのでメモ程度に利用してください。
  * 
  * ---[type(同属打消方式)]---
  * 同属ステートの打消方式です。
- * １キャラに複数の同属ステートを付加できない仕様になっています。
- * 既に同属ステートが付加されていたとき、後から付加されるステートが上書するか、
- * 無効になるか、中和されるか(どちらも無効になるか)を設定できます。
- * 後述のrankTypeを用いる場合は、
- * 同属同ランク(同格)のステートにのみ適用されます。
- * 
  *      [overwrite(上書)]
  *          後から付加されるステートが付加され、
  *          既に付加されていた同属ステートは解除されます。
- * 
  *      [cancel(無効)]
  *          後から付加されるステートは無効になります。
- * 
  *      [neutaralize(中和)]
  *          後から付加されるステートは無効になりますが、
  *          既に付加されていた同属ステートも解除されます。
  * 
  * ---[rankType]---
  * ランク値による優先方式です。
- * この項目では、既に同属のステートが付加されていたとき、
- * 付加されようとしているステートのランク値の高低によって、
- * 上書と無効の関係を設定できます。
- * 
+ * ランク値が異なる場合に、高い方・低い方どちらのステートを優先させるかの方式です。
  *     [none(優先なし)]
  *          ランク値による優先を用いません。ランク値による優先は発生せず、
  *          常に前項のtypeによって判定されます。
- * 
  *     [higher(高ランク優先)]
- *          付加されている同属ステートよりも高ければ、「上書」になります。
+ *          付加されている同属ステートよりも高ければ、「上書」と
  *          付加されている同属ステートよりも低ければ、「無効」になります。
  *          付加されている同属ステートと同値であれば、typeに従います。
- * 
  *     [lower(低ランク優先)]
  *          付加されている同属ステートよりも低ければ、「上書」になります。
  *          付加されている同属ステートよりも高ければ、「無効」になります。
  *          付加されている同属ステートと同値であれば、typeに従います。
  * 
  * ---[flag]---
- * 通常切替フラグです。切替の条件です。
- * ステートの設定画面のステート解除条件と対応しています。
- * 各項目が有効でも無効でも動作するものと、
- * 無効なら動作しないものがありますので注意してください。
- * 基本的には解除条件は有効にすることをお勧めします。
- * 同じ種類のフラグは１つしか用いることができませんが、
- * 異なる種類のフラグ(xFlag,sFlag)と共存できます。     
- * 
+ * 通常切替フラグです。
+ * ステートの設定画面のステート解除条件と対応しています。   
  *      [none(なし)]
- *      このフラグを用いません。
- * 
+ *          このフラグを用いません。
  *      [battleEnd(戦闘終了時)]
- *          戦闘終了時に切り替わります。有効でも無効でも動作します。
- * 
+ *          戦闘終了時に切り替わります。有効でも無効でも作動します。
  *      [restrict(行動制約)]
- *          行動制約時に切り替わります。有効でも無効でも動作します。
- * 
+ *          行動制約時に切り替わります。有効でも無効でも作動します。
  *      [turns(継続ターン)]
  *          継続ターン数によって切り替わります。
- *          自動解除のタイミングが「なし」の場合は動作しませんので、
- *          「行動終了時」または「ターン終了時」のどちらかに設定してください。
- * 
+ *          自動解除のタイミングが「なし」の場合は作動しません。
  *      [damage(歩数)]
  *          ダメージを受けたことによって切り替わります。
- *          有効でも無効でも動作します。
- *          「ダメージによる解除確率」に従います。
- * 
+ *          有効でも無効でも作動します。
+ *          作動確率は「ダメージによる解除確率」に従います。
  *      [steps(歩数)]
  *          歩数によって切り替わります。
- *          無効なら動作しません(ステートの歩数カウンタが動作しないため)。
+ *          無効なら作動しません。
  * 
  * ---[xFlag]---
  * 拡張切替フラグです。
- * 属する各ステートのノートタグ<RSGxRate:xx>が、
- * 切り替え発生確率の判定に用いられます。
- * その記述がない、あるいは有効な値がない場合は、
- * 必ず切り替えが発生することになります。
- *
+ * 各ステートのノートタグ<RSGxRate:xx>で、作動確率を設定できます。
  *      [none(なし)]
- *      このフラグを用いません。
- * 
+ *          このフラグを用いません。
  *      [remove(解除時)]
- *          ステート解除時に切り替わります。ここでいう「解除」とは、
- *          このプラグインによる動作以外を要因とする解除に限られます。
- *          ただし相殺グループの付加による解除については
- * 
+ *          「切替」「上書」「中和」以外の状況で解除された時に切り替わります。
  *      [battleStart(戦闘開始)]
  *          戦闘開始時に切り替わります。
- * 
  *      [firstAction(初回行動時)]
  *          そのターンの初回行動時、厳密にはその直前に切り替わります。
- * 
  *      [allActionsEnd(全行動終了時)]
  *          そのターンの全ての行動が終わった後に切り替わります。
- * 
  *      [turnEnd]
  *          そのターンの全キャラクターの行動が終わった後に切り替わります。
  * 
  * ---[sFlag/sValue]---
  * 特殊切替フラグです。
- * sValueに有効な値が入力されていない場合は、
- * sFlagは作動しません。
- * 属する各ステートのノートタグ<RSGsRate:xx>が、
- * 切替の発生確率の判定に用いられます。
- * その記述がない、あるいは有効な値がない場合は、
- * 必ず切り替えが発生することになります。
+ * 各ステートのノートタグ<RSGsRate:xx>で、作動確率を設定できます。
  * sFlagを用いるには、その種類によってそれぞれのsValueを設定する必要があります。
- * この項目を[param]や[rateOfHMT]にした場合、
- * targetの動作が他のものと異なることになります。
- * 
+ * [param]や[rateOfHMT]に設定した場合、切替の動作が他のものと異なります。
  *      [none(なし)]
  *         このフラグを用いません。
- *      
  *      [addedState(付加ステート)]
  *          sValueにステートのIDを半角数字で記入してください。
  *          そのステートが付加された直後に切り替えが発生します。
- *          基本的に本プラグインの動作による付加には反応しませんが、
+ *          「切替」には反応しませんが、
  *          属性攻撃による付加については反応します。
- * 
  *      [addedStateGroup(付加ステートグループ)]
  *          sValueにステートグループIDを設定して下さい。
  *          そのグループに属すステートが付加された直後に切り替えが発生します。
- *          それ以外は[addedState]と同じです。
- * 
+ *          「切替」には反応しませんが、
+ *          属性攻撃による付加については反応します。
  *      [damagedElement(属性ダメージ)]
  *          sValueに属性IDを半角数字で記入して下さい。
  *          その属性でダメージを受けた直後に切り替えが発生します。
- * 
  *      [usingSkill(使用スキル)]
  *          sValueには、スキルIDを半角数字で記入して下さい。
  *          スキルの成功に関わらず、
  *          そのスキルのコストを消費する直前に切り替えが発生します。
- * 
  *      [usingSkillType(使用スキルタイプ)]
  *          sValueには、スキルタイプIDを半角数字で記述して下さい。
- *          スキルの成功に関わらず、
  *          そのタイプに属すスキルのコストを消費する直前に切り替えが発生します。
- * 
  *      [param(能力値)]
  *          属するステートに「有効範囲」が発生するフラグです。
- *          有効範囲の値(下限と上限)には属するステートのランク値が用いられます。
- *          詳しくは、後述の「ランク値について」をお読みください。
- *          sValueには、能力値のID(＝アルファベットの略称)を記述して下さい。
- *          指定した能力値が、有効範囲に達すれば切替が発生します。
- *
  *          targetの項目が[rankDown]または[rankUp]の場合、
- *          下限に達すれば[rankDown]と同じ動作、
- *          上限に達すれば[rankUp]と同じ動作になります。
- *          targetの項目が[random]や[none]であれば解除されることになります。
- *          このフラグを持つグループに属するステートを付加されようとしたとき、
+ *          下限に達すれば次に低ランクなステート、
+ *          上限に達すれば次に高ランクなステートに切り替わります。
+ *          target[random]や[none]の場合、
+ *          有効範囲から外れた瞬間に解除されます。
+ *          target[state]の場合、
+ *          有効範囲から外れた瞬間に規定されたステートに切り替わります。
+ *          このフラグを持つグループに属するステートが付加されようとしたとき、
  *          有効範囲に合ったステートが自動的に付加されることになります。
+ *          有効範囲を外れると必ず切替を起こす必要があるため、
  *          ノートタグに<RSGsRate:xx>がついていても無視されます。
- *
  *      [rateOfHMT(HP/MP/TPの残存割合)]
  *          属するステートに「有効範囲」が発生するフラグです。
  *          sValueには hp mp tp のいずれかを記述して下さい。
@@ -365,67 +295,56 @@
  * 切替先となるステートを設定します。
  * flag、xFlag、sFlagで設定したそれぞれの条件が満たされたときに、
  * この設定に従って切り替わります。
- * target[state]の場合は、
- * 各ステートのノートタグ<RSGtargetState:xx>で設定したステートへ、
- * 切り替わることになります。
- * 「切替」の作動機序としては基本的に、
- *      1.元のステートが解除(削除)される
- *      2.切替先ステートが付加される
- * という機序で動きます。
- * ただしこの時の「解除」および「付加」は、
- *      xFlagの[remove]
- *      sFlagの[addedState]および[addedStateGroup]
+ * 切替は、
+ *      xFlag[remove]
+ *      sFlag[addedState]
+ *      sFlag[addedStateGroup]
  * を動作させることはありません。
- * 
  *       [none]
  *          何も起こらないか、sFlagに有効範囲がある場合、解除されます。
- * 
  *       [rankUp]
  *          同じグループの中でランク値が次に大きいステートに切り替わります。
  *          次に高いステートがない場合は何も起こりません。
- *          sflagに有効範囲がある場合は、rankUpもrankDownも変わりません。
- *          ただしrankType[none]の場合、
- *          rankUpとrankDownで有効範囲が異なります。
- * 
  *       [rankDown]
  *          同じグループの中でランク値が次に大きいステートに切り替わります。
  *          次に低いステートがない場合は何も起こりません。
- * 
  *       [random]
  *          同じグループのランダムなステートに切り替わります。
  *          sFlagに有効範囲がある場合は、単に解除されます。
- *
  *       [state]
  *          ノートタグ<RSGtargetState:xx>で指定したステートに切り替わります。
  *          ノートタグに有効な値が記入されていない場合は切り替えが起こりません。
  *
  * ---[element/eRate]---
  * グループに属性を関連付けます。
- * 属性によるダメージを受けると、それに関連づけられたグループの中で、
- *「最も適したステート」が付加されます。
- * eRateでその付加確率を設定できます。
- * 属性ダメージによる実際の付加確率は、
- * eRate * [ステート耐性率] * [運による補正率] です。
- * target[rankUp]の場合：最もランク値の低いものが付加されます。
- * target[rankDown]の場合：最もランク値の高いものが付加されます。
- * targetがそれ以外の場合で、
- *      rankType[higher]の場合：最もランク値の低いものが付加されます。
- *      rankType[lower]の場合：最もランク値の高いものが付加されます。
- * なお、sFlagに有効範囲がある場合は、有効範囲に合うステートが付加されます。
- * それ以外の場合、グループの中からランダムに選ばれます。
- * また、属性によるステートの付加については、
- * その他のステートグループのsFlag[state]および[stateGroup]を動作させます。
- * デフォルトはどちらも0で、この状態だと何も起こりません。
+ * デフォルトではどちらも0で、このままだと何も起こりません。
+ * 関連づけられた属性による攻撃を受けると、
+ * グループの「初期ステート」が付加されます。
+ * eRateで初期ステートの付加確率を設定できます。
+ * 属性攻撃による実際の付加確率は、
+ * eRate * [初期ステートに対する耐性率] * [運による補正率] です。
+ * また、属性によるステートの付加には、
+ * その他のステートのsFlag[state]および[stateGroup]を動作させます。
+ *
+ * 「初期ステート」は、以下のように決定されます。
+ * target[rankUp]の場合：最低ランクのステート(複数あればランダム)
+ * target[rankDown]の場合：最高ランクのステート(複数あればランダム)
+ * targetがそれ以外の場合：
+ *      rankType[higher]の場合：最高ランクのステート(複数あればランダム)
+ *      rankType[lower]の場合：最低ランクのステート(複数あればランダム)
+ *      ranktype[none]の場合：グループの中からランダム
+ * sFlag[param]および[rateOfHMT]の場合、
+ * 自動的に有効範囲に合ったステートが付加されます。
  * 
  * ---[counter]---
  * このグループに属するステートを相殺するグループ(相殺グループ)を設定できます。
+ * デフォルトは０で、この状態だと何も起こりません。
  * 相殺グループのステートが既に付加されているとき、
  * 相殺グループのステートは解除され、
  * このグループに属するステートの付加も無効になります。
  * 相殺グループの設定にもcounterを設定することで、
  * 両者のグループが同時に共存することはなくなります。
  * ちょうど、type[neutral]と同じ挙動になります。
- * デフォルトは０で、この状態だと何も起こりません。
  * 
  *-----------------------------------------------------------------------------
  * ランク値について
@@ -440,31 +359,38 @@
  * 
  * 【sFlagに有効範囲がある場合のランク値の利用】
  * sFlag[param]および[rateOfHMT]の場合、
- * 切替の判定で用いる値の有効範囲について、
- + その上限値と下限値を決めるため、
+ + 各ステートの有効範囲の上限と下限を決めるため、
  * ランク値の数値を転用することになります。
- * 上限値と下限値の決定方法は、以下のような仕様になっています。
- * rankTypeが[higher]の場合：
- *     上限値：次に高いステートのランク値(ない場合は無限大)
+ * 上限値と下限値は、以下のように決定されます。
+ * ◆rankType[higher]の場合：
+ *     上限値：次に高いステートのランク値
+ *            最高ランクの場合は上限なし 
  *     下限値：現在のステートのランク値
- *     下限値≦有効範囲<上限値
- * rankTypeが[lower]の場合：
+ *            最低ランクの場合は下限なし
+ *     [下限値 ≦ 有効範囲 < 上限値]
+ * ◆rankType[lower]の場合：
+ *     上限値：そのステートのランク値
+ *            最高ランクの場合は上限なし
+ *     下限値：次に低いステートの同属ランク値
+ *            最低ランクの場合は下限なし
+ *     [下限値 ≦ 有効範囲 < 上限値]
+ * ◆rankTypeg[none]の場合：
+ *   かつtarget[rankUp]の場合：
+ *     上限値：次に高い同属ステートのランク値
+ *            最高ランクの場合は上限なし
+ *     下限値：現在のステートのランク値
+ *            最低ランクの場合は下限なし
+ *     [下限値 ≦ 有効範囲 < 上限値]
+ *   かつtarget[rankDown]の場合：
  *     上限値：現在のステートのランク値
- *     下限値：次に低いステートの同属ランク値(ない場合は無限小)
- *     下限値≦有効範囲<上限値
- * rankTypegが[none]の場合：
- *     targetが[rankUp]の場合：
- *         上限値：次に高い同属ステートのランク値(ない場合は無限大)
- *         下限値：現在のステートのランク値
- *         下限値≦有効範囲<上限値
- *     targetが[rankDown]の場合：
- *         上限値：現在のステートのランク値
- *         下限値：次に低いステートの同属ランク値(ない場合は無限小)
- *         下限値≦有効範囲<上限値
- *     targetが[none]あるいは[state]の場合：
- *         上限値：次に高い同属ステートのランク値(ない場合は無限大)
- *         下限値：次に低いステートの同属ランク値(ない場合は無限小)
- *         下限値<有効範囲<上限値
+ *            最高ランクの場合は上限なし
+ *     下限値：次に低いステートの同属ランク値
+ *            最低ランクの場合は下限なし
+ *     [下限値 ≦ 有効範囲 < 上限値]
+ *   かつtarget[none]、[random]あるいは[state]の場合：
+ *     上限値：次に高い同属ステートのランク値
+ *     下限値：次に低いステートの同属ランク値
+ *     [下限値 < 有効範囲 < 上限値]
  * 
  *-----------------------------------------------------------------------------
  * ステートのノートタグ
@@ -472,80 +398,23 @@
  *
  * <RSGgroupId:xx>(半角数字)
  *      グループのID番号を設定します。ステートは１つのグループにのみ属せます。
- *
  * <RSGrank:xx>(半角数字)
  *      ステートのグループ内でのランク値を設定します。
  *      この記述がない場合、ステートの「優先度」がランク値として用いられます。
- *
- * <RSGxRate:xx>(半角)
+ * <RSGxRate:xx>(半角数字)
  *      拡張フラグ(xFlag)によるステート切り替えの作動確率です。
  *      この記述がない場合、xFlagは必ず作動します。
- *
- * <RSGsRate:xx>
+ * <RSGsRate:xx>(半角数字)
  *      特殊フラグ(sFlag)によるステート切り替えの作動確率です。
- * 
- * <RSGtargetState:xx>
- *      属するグループの設定：target(切替先)が[state]に設定して下さい。
+ * <RSGtargetState:xx>(半角数字)
+ *      属するグループがtarget[state]の場合に設定して下さい。
  *      設定しない場合、切り替えが作動しません。
- * 
  * 
  *-----------------------------------------------------------------------------
  * グループ数の拡張
  *-----------------------------------------------------------------------------
  * 10個以上のグループが必要な場合はEXTENSIONの項で追加してください。
  * EXTENSIONで設定した各グループのIDは、行番号に10を足したものになります。
- *
- *-----------------------------------------------------------------------------
- * RRT_StateGroupsのグループレシピ例
- *-----------------------------------------------------------------------------
- * 1. ターンごとに症状が重くなり最後には戦闘不能になる「致命傷」
- *      type[cancel]
- *      rankType[higher]
- *      flag[turns]
- *      target[rankUp](戦闘不能をグループに入れたくない場合、[state]でも可能です)
- * 第１ステート：
- *   自動解除のタイミング：行動終了時(１〜２ターン)、スリップダメージ
- *     ↓切替
- * 第２ステート：
- *   自動解除のタイミング：行動終了時(１〜２ターン)、スリップダメージ、防御力低下
- *     ↓切替
- * 第３ステート：
- *   自動解除のタイミング：行動終了時(１〜２ターン)、行動制約：行動不能
- *     ↓切替
- * 第４ステート：戦闘不能
- *
- * 2. 移動時にダメージを受け、戦闘が開始すると暴走する「戦闘狂」
- *     複数のグループを使います。
- * グループ１(移動時)：
- *     type[overwrite]
- *     rankType[none]
- *     xFlag[battlestart] 
- *     target[state]
- * グループ２(戦闘時)：
- *     type[overwrite]
- *     rankType[none]
- *     flag[battleEnd] 
- *     target[state]
- * 移動時ステート(グループ１)：
- *   <RSGtargetState:(戦闘時ステート)>、HP再生率低下(＝スリップダメージ)
- *      ↓戦闘開始時   ↑戦闘終了時
- * 戦闘時ステート(グループ)
- *   <RSGtargetState:(移動時ステート)>、行動制約「敵を攻撃」、攻撃力・俊敏性＋20%
- *
- * 3. 攻撃されるたびに耐性値がコロコロ変わるトリッキーなステート「道化の舞」
- *     type[overwrite]
- *     flag[damage]
- *     target[random]
- * ステート1：
- *     炎属性耐性 200%
- *     水属性耐性 70%
- * ステート2：
- *     水属性耐性 200%
- *     雷属性耐性 70%
- * ステート3：
- *     雷属性耐性 200%
- *     炎属性耐性 70%
- *
  */
 //---------------------------------------------
 //RRT.StateGroups
@@ -566,70 +435,25 @@
             return false;
         }
         if (!RRT.StateGroups.databaseLoad) {
-            RRT.StateGroups.initNativeDatabase();
+            RRT.StateGroups.initDatabase();
             RRT.StateGroups.databaseLoad = true;
         }
         return true;
     };
 
     Object.defineProperties(RRT.StateGroups, {
-        //基礎データベース
-        X_defaultDatabase: {
+        X_database: {
             writable: true,
-            value: []
+            value: [],
         },
-        defaultDatabase: {
-            get: function () {
-                return this.X_defaultdatabase;
-            },
-            set: function (database) {
-                this.X_defaultdatabase = database;
-            }
-        },
-        //拡張データベース
-        X_expandedDatabase: {
-            writable: true,
-            value: []
-        },
-        expandedDatabase: {
-            get: function () {
-                return this.X_expandedDatabase;
-            },
-            set: function (database) {
-                this.X_expandedDatabase = database;
-            }
-        },
-        //プラグインパラメータ上で定義されているステートの全データベース
-        nativeDatabase: {
-            get: function () {
-                return this.X_defaultdatabase.concat(this.X_expandedDatabase);
-            }
-        },
-        //プラグインコマンドで追加されるステートグループ(未実装)。
-        X_addedDatabase: {
-            enumerable: true,
-            writable: true,
-            value: []
-        },
-        addedDatabase: {
-            get: function () {
-                return this.X_addedDatabase;
-            },
-            set: function (addedGroups) {
-                this.X_addedDatabase = addedGroups;
-            },
-            configurable: true
-        },
-        //データベース総合：
         database: {
+            configurable: true,
             get: function () {
-                if (this.addedDatabase) {
-                    return this.nativeDatabase.concat(this.addedDatabase);
-                } else {
-                    return this.nativeDatabase;
-                }
+                return this.X_database;
             },
-            configurable: true
+            set: function (databaseArray) {
+                this.X_database = databaseArray;
+            }
         }
     });
 
@@ -637,24 +461,28 @@
     RRT.StateGroups.parameters = function () {
         return PluginManager.parameters(this.pluginName);
     };
-
-    //初期データベースを初期化
-    RRT.StateGroups.initNativeDatabase = function () {
-        this.initDefaultDatabase();
-        //this.initExpandedDatabase();
-    };
-    //プラグインパラメータの中からステートグループの設定が格納されている各パラメータ名を配列で取得
-    RRT.StateGroups.defaultGroupIds = function () {
-        var ids = [];
-        var params = this.parameters();
-        for (var param in params) {
-            if (/STATE_GROUP/i.test(param)) {
-                ids.push(param.replace('STATE_GROUP', ''));
+    //データベースを初期化
+    RRT.StateGroups.initDatabase = function () {
+        var database = [];
+        var params = JSON.parse(this.parameters().StateGroups || 'null');
+        database.push(this.nonGroupSetting());
+        for (var i = 0; i < params.length; i++) {
+            database[i + 1] = JSON.parse(params[i] || 'null');
+            if (database[i + 1]) {
+                for (var item in database[i + 1]) {
+                    if (parseInt(database[i + 1][item], 10) >= 0) {
+                        database[i + 1][item] = Number(database[i + 1][item])
+                    }
+                }
+            } else {
+                database[i + 1] = this.defaultGroupSetting();
             }
+            database[i + 1].groupId = i + 1;
+            database[i + 1].states = this.setStates(
+                database[i + 1].groupId, database[i + 1].target);
         }
-        return ids;
+        this.database = database;
     };
-    //デフォルトのグループ設定の定義
     RRT.StateGroups.defaultGroupSetting = function () {
         var setting = {
             type: "overwrite",
@@ -662,69 +490,29 @@
             flag: "none",
             xFlag: "none",
             sFlag: "none",
-            sValue: null,
             target: "none",
             element: 0,
             eRate: 0,
             counter: 0,
-            states: {}
+            states: [],
         };
         return setting;
     };
-    //グループに属さないステートが属す「無グループ」の定義
     RRT.StateGroups.nonGroupSetting = function () {
         var setting = {
-            id: 0,
+            groupId: 0,
             type: null,
             rankType: null,
             flag: null,
             xFlag: null,
             sFlag: null,
-            sValue: null,
             target: null,
             element: 0,
             eRate: 0,
             counter: 0,
-            states: {}
+            states: [],
         };
         return setting;
-    };
-    //デフォルトデータベースを初期化
-    RRT.StateGroups.initDefaultDatabase = function () {
-        var database = [];
-        var params = this.parameters();
-        var ids = this.defaultGroupIds();
-        database.push(this.nonGroupSetting());
-        for (var i = 0; i < ids.length; i++) {
-            if (params['STATE_GROUP' + ids[i]]) {
-                database.push(JSON.parse(params['STATE_GROUP' + ids[i]]));
-                for (var item in database[i + 1]) {
-                    if (parseInt(database[i + 1][item], 10) >= 0) {
-                        database[i + 1][item] = Number(database[i + 1][item])
-                    }
-                }
-                database[i + 1].groupId = Number(ids[i]);
-                database[i + 1].states = RRT.StateGroups.setStates(
-                    database[i + 1].groupId, database[i + 1].target);
-            } else {
-                database.push(this.defaultGroupSetting());
-                database[i + 1].groupId = Number(ids[i]);
-                database[i + 1].states = RRT.StateGroups.setStates(
-                    database[i + 1].groupId, database[i + 1].target);
-            }
-        }
-        this.defaultDatabase = database;
-    };
-    //拡張データベースを初期化
-    RRT.StateGroups.initExpandedDatabase = function () {
-        var database = [];
-        var expansions = JSON.parse(this.parameters().EXPANSION || 'null');
-        for (var i = 0; i < expansions.length; i++) {
-            database[i] = JSON.parse(expansions[i] || 'null');
-            database[i].groupId = (this.defaultGroupIds().length + 1 + i);
-            database[i].states = this.setStates(database[i].groupId, database[i].target);
-        }
-        this.expandedDatabase = database;
     };
     //各ステートの設定
     RRT.StateGroups.setStates = function (groupId, target) {
@@ -804,62 +592,27 @@
                 break;
             case "state":
                 for (var n = 0; n < states.length; n++) {
-                    if (!isNaN(Number($dataStates[ids[n]].meta.RSGtargetState))){
-                    states[ids[n]].target = Number($dataStates[ids[n]].meta.RSGtargetState);
+                    if (!isNaN(Number($dataStates[ids[n]].meta.RSGtargetState))) {
+                        states[ids[n]].target = Number($dataStates[ids[n]].meta.RSGtargetState);
                     }
                 }
                 break;
         }
         return states;
     };
-    //初期データベースに特定IDのグループはあるか
-    RRT.StateGroups.isGroupInNativeDatabase = function (groupId) {
-        var isIn = false;
-        var natives = this.nativeDatabase;
-        for (var i = 0; i < natives.length; i++) {
-            if (natives[i] && natives[i]['id'] === groupId) {
-                isIn = true;
-                break;
-            }
-        }
-        return isIn;
-    };
-    //初期データベースの最後のグループIdを取得(追加データベースのIDはこの値+1から始まる)
-    RRT.StateGroups.lastNativeGroupId = function () {
-        return (this.defaultGroupIds().length + this.expandedDatabase.length);
-    };
-    //特定グループの設定を取得
-    RRT.StateGroups.getGroupSetting = function (groupId) {
-        var group = {};
-        loopout: for (var i = 0; i < this.database.length; i++) {
-            if (this.database[i] && this.database[i].id === groupId) {
-                group = this.database[i];
-                break loopout;
-            }
-        }
-        return group;
-    };
 
     //---------------------------------------------
     //RSG Methods
-    //判定などの際に頻繁に使うメソッドをまとめています
     //---------------------------------------------
 
     var RSGM = {};
     Object.defineProperties(RSGM, {
         database: {
-            configurable: true,
-            get: function () {
+            get: function(){
                 return RRT.StateGroups.database;
             }
-        },
-        lastGroupId: {
-            get: function () {
-                return RRT.StateGroups.lastNativeGroupId() + RRT.StateGroups.addedDatabase.length;
-            }
         }
-    });
-
+    })
     //グループ内で最も高ランクのステート(数値；ステートID)
     RSGM.highestOf = function (groupId) {
         var highests = [];
@@ -1119,8 +872,8 @@
             case "higher_rankDown":
             case "higher_state":
             case "higher_none":
-                if (nextLower){
-                limit[0] = states[stateId].rank;
+                if (nextLower) {
+                    limit[0] = states[stateId].rank;
                 }
                 if (nextHigher) {
                     limit[1] = states[nextHigher].rank;
@@ -1135,8 +888,8 @@
                 if (nextLower) {
                     limit[0] = states[nextLower].rank;
                 }
-                if (nextHigher){
-                limit[1] = states[stateId].rank;
+                if (nextHigher) {
+                    limit[1] = states[stateId].rank;
                 }
                 limit[2] = "equalHigh";
                 return limit;
@@ -1213,12 +966,9 @@
     }
 
     //---------------------------------------------
-    //ADDINGS ON CORE SCRIPT
-    //コアスクリプトへの追加事項
+    //Adding on core script
     //---------------------------------------------
-    //--------------------
     //RSG STATES
-    //グループに属するステート
     //--------------------
 
     //既に付加されている、何らかのグループに属すステート(配列：ステートID)
@@ -1234,7 +984,6 @@
 
     //--------------------
     //REMOVE DUPLICATION
-    //同属ステート重複の打消
     //--------------------
 
     //特定のステートの付加を無効化するステートが付加されているか(真偽値)
@@ -1263,27 +1012,9 @@
         }
         return weakers;
     };
-    //強いステートがあれば弱いステートを削除(処理)
-    //同じグループに属する複数のステートが付加されていない状況を作るための処理です。
-    //打消の判定で同属のステートが同時に付加されることは防がれますが、念のため。
-    //現在は無効化しています
-    /*
-    Game_Battler.prototype.RSG_eraseDuplication = function () {
-        var states = this.RSG_statesOfRSG();
-        for (var i = 0; i < states.length; i++) {
-            if (RSGM.groupOf(states[i]).rankType === "higher" ||
-                RSGM.groupOf(states[i]).ranktype === "lower") {
-                if (this.RSG_hasStrongersOf(states[i])) {
-                    this.eraseState(states[i]);
-                }
-            }
-        }
-    };
-    */
 
     //--------------------
     //GROUP ELEMENT
-    //グループ属性
     //--------------------
 
     //代表ステートの付加(処理)
@@ -1318,8 +1049,7 @@
     };
 
     //--------------------
-    //STATE CHANGE
-    //ステートの切替
+    //CHANGE
     //--------------------
 
     //特定のステートが切替条件(フラグ)を満たした場合の切替先(数値：ステートID)
@@ -1365,21 +1095,17 @@
 
     //--------------------
     //FLAG
-    //通常フラグ
     //--------------------
 
     //通常フラグ：戦闘終了時
-    //解除条件「戦闘終了時」が有効でない場合でも、作動します。
     Game_Battler.prototype.RSG_flag_battleEnd = function () {
         this.RSG_flagToChange("battleEnd");
     };
     //通常フラグ：行動制約時
-    //解除条件「行動制約によって解除」が有効ではない場合でも、作動します。
     Game_Battler.prototype.RSG_flag_restrict = function () {
         this.RSG_flagToChange("restriction");
     };
     //通常フラグ：継続ターン数
-    //「自動解除のタイミング」が「なし」の場合は、作動しません。
     Game_Battler.prototype.RSG_flag_turns = function (timing) {
         var states = this.RSG_statesOfRSG();
         for (var i = 0; i < states.length; i++) {
@@ -1391,8 +1117,6 @@
         }
     };
     //通常フラグ：被ダメージ時
-    //解除条件「ダメージで解除」が有効でない場合でも、作動します。
-    //確率にはデータベース(States.json)にある「chanceByDamage」を用います。
     Game_Battler.prototype.RSG_flag_damage = function () {
         var states = this.RSG_statesOfRSG();
         for (var i = 0; i < states.length; i++) {
@@ -1404,7 +1128,6 @@
         }
     };
     //通常フラグ：歩数
-    //解除条件「歩数で解除」が有効でない場合は、作動しません。
     Game_Actor.prototype.RSG_flag_steps = function (state) {
         if (state.removeByWalking &&
             RSGM.groupOf(state.id).flag === "steps" &&
@@ -1416,7 +1139,6 @@
 
     //--------------------
     //XFLAG
-    //拡張フラグ
     //--------------------
 
     //拡張フラグ：解除時に切替
@@ -1445,7 +1167,6 @@
         this.RSG_firstAction = false;
     };
     //拡張フラグ：初回行動時に切替
-    //そのターンでの初めての行動の直前にステートの切替が発生します。
     Game_Battler.prototype.RSG_xFlag_firstAction = function () {
         if (this.RSG_firstAction) {
             this.RSG_flagToChange("firstAction");
@@ -1453,13 +1174,11 @@
         this.RSG_firstActionOFF();
     };
     //拡張フラグ：全行動終了時に切替
-    //そのターンでの行動が全て終了した後にステートの切替が発生します。
     Game_Battler.prototype.RSG_xFlag_allActionsEnd = function () {
         this.RSG_flagToChange("allActionsEnd");
         this.RSG_firstActionON();
     };
     //拡張フラグ：ターン終了時
-    //ターン終了時に切替が発生します。
     Game_Battler.prototype.RSG_xFlag_turnEnd = function () {
         this.RSG_flagToChange("turnEnd");
         this.RSG_firstActionON();
@@ -1467,12 +1186,10 @@
 
     //--------------------
     //SFLAG
-    //特殊フラグ
     //--------------------
 
     //特殊フラグ：ステート付加時
     //特殊フラグ：ステートグループ付加時
-    //切替は当該ステートの付加直後に発生します。
     Game_Battler.prototype.RSG_sFlag_addedState = function (stateId) {
         if (this._result.addedStates.some(function (addedStateId) {
                 return addedStateId === stateId;
@@ -1492,7 +1209,6 @@
     };
     //特殊フラグ；スキル使用時
     //特殊フラグ：スキルタイプ使用時
-    //切替は当該スキルの効果発動の直前に発生します。
     Game_Battler.prototype.RSG_sFlag_usingSkill = function (item) {
         if (DataManager.isSkill(item)) {
             var states = this.RSG_statesOfRSG();
@@ -1510,7 +1226,6 @@
         }
     };
     //特殊フラグ：属性によるダメージ時
-    //切替はダメージが与えられた直後に発生します
     Game_Action.prototype.RSG_sFlag_damagedElement = function (target) {
         var states = target.RSG_statesOfRSG();
         for (var i = 0; i < states.length; i++) {
@@ -1589,8 +1304,7 @@
     };
 
     //--------------------
-    //ADD STATE
-    //ステート付加の処理
+    //ADDING STATE
     //--------------------
 
     //特定のステートより弱い同属ステートと、相殺ステートの解除(処理)
@@ -1606,6 +1320,10 @@
     };
     //ステートを付加する前の処理に追加する処理
     Game_Battler.prototype.RSG_matchState = function (stateId) {
+        console.log("whatIsMyRSGState?");
+        console.log(this.RSG_statesOfRSG());
+        console.log(String(stateId) + "isRSG?" + String(RSGM.isRSG(stateId)));
+        console.log(String(stateId) + "hasStrongers?" + String(this.RSG_hasStrongersOf(stateId)));
         if (RSGM.isRSG(stateId) &&
             this.RSG_hasStrongersOf(stateId)) {
             stateId = 0;
@@ -1621,12 +1339,12 @@
         var match = this.RSG_matchState(stateId);
         this.RSG_beforeAddingState(stateId);
         stateId = match;
+        console.log("whatStateadding?" + String(stateId));
         RRT.StateGroups._Game_Battler_addState.call(this, stateId);
     };
 
     //--------------------
     //REFRESH
-    //グループステートの正常化
     //--------------------
 
     Game_Battler.prototype.RSG_refresh = function () {
@@ -1635,8 +1353,7 @@
     };
 
     //---------------------------------------------
-    //OVERWRITINGS ON CORE SCRIPT
-    //コアスクリプト改変事項
+    //OVERWRITINGS
     //---------------------------------------------
 
     //Game_Battler.prototype.onBattleEnd
@@ -1724,7 +1441,6 @@
     };
     //---------------------------------------------
     //Game_Interpreter
-    //
     //---------------------------------------------
 
     //デバッグ用に置いておきます。
@@ -1733,6 +1449,7 @@
         _RSG_Game_Interpreter_pluginCommand.call(this, command, args);
         if (command == "RSG") {
             console.log(RSGM.database);
+            console.log(RSGM.strongersOf(4));
         }
     };
 
