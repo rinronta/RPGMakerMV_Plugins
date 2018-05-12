@@ -6,6 +6,8 @@
 // http://opensource.org/licenses/mit-license.php
 // ----------------------------------------------------------------------------
 // 変更履歴
+// v0.6.0 2018/05/12 ステートの継続ターン数引き継ぎオプションを追加
+//                   大部分のxFlag,sFlagが作動しなかったバグを修正
 // v0.5.0 2018/05/09 データベースをリスト形式に統一
 //                   その他、コーディングのミスを修正
 //                   別途オンラインヘルプ作成のためプラグインヘルプ・コメントアウト等を簡略化
@@ -115,8 +117,13 @@
  * @value state
  * @default none
  *
+ * @param takeover
+ * @desc ステートの継続ターン数を引き継ぐかどうか。flag[turns]以外にのみ適用。
+ * @type boolean
+ * @default false
+ *
  * @param element
- * @desc グループ属性。指定した属性で攻撃されたとき、グループ内のステート(代表ステートorランダム)が付加される。
+ * @desc グループ属性。指定した属性で攻撃されたとき、グループの初期ステートが付加される。
  * @type number
  * @default 0
  *
@@ -470,7 +477,7 @@
             database[i + 1] = JSON.parse(params[i] || 'null');
             if (database[i + 1]) {
                 for (var item in database[i + 1]) {
-                    if (parseInt(database[i + 1][item], 10) >= 0) {
+                    if (isFinite(database[i + 1][item])) {
                         database[i + 1][item] = Number(database[i + 1][item])
                     }
                 }
@@ -525,13 +532,13 @@
                     sRate: 100,
                     target: 0
                 };
-                if (parseInt($dataStates[i].meta.RSGrank, 10) >= 0) {
+                if (isFinite(Number($dataStates[i].meta.RSGrank))) {
                     states[$dataStates[i].id].rank = Number($dataStates[i].meta.RSGrank);
                 }
-                if (parseInt($dataStates[i].meta.RSGxRate, 10) >= 0) {
+                if (isFinite(Number($dataStates[i].meta.RSGxRate))) {
                     states[$dataStates[i].id].xRate = Number($dataStates[i].meta.RSGxRate);
                 }
-                if (parseInt($dataStates[i].meta.RSGsRate, 10) >= 0) {
+                if (isFinite(Number($dataStates[i].meta.RSGsRate))) {
                     states[$dataStates[i].id].sRate = Number($dataStates[i].meta.RSGsRate);
                 }
             }
@@ -592,7 +599,7 @@
                 break;
             case "state":
                 for (var n = 0; n < states.length; n++) {
-                    if (!isNaN(Number($dataStates[ids[n]].meta.RSGtargetState))) {
+                    if (isFinite(Number($dataStates[ids[n]].meta.RSGtargetState))) {
                         states[ids[n]].target = Number($dataStates[ids[n]].meta.RSGtargetState);
                     }
                 }
@@ -608,7 +615,7 @@
     var RSGM = {};
     Object.defineProperties(RSGM, {
         database: {
-            get: function(){
+            get: function () {
                 return RRT.StateGroups.database;
             }
         }
@@ -670,7 +677,7 @@
     };
     //ステートがなんらかのグループに属すか(真偽値)
     RSGM.isRSG = function (stateId) {
-        if (stateId && Number($dataStates[stateId].meta.RSGgroupId)) {
+        if (stateId && isFinite(Number($dataStates[stateId].meta.RSGgroupId))) {
             return true;
         } else {
             return false;
@@ -691,13 +698,11 @@
         if (this.isRSG(stateId)) {
             var states = this.groupOf(stateId).states;
             var target = states[stateId].target;
-            if (target >= 0) {
-                return target;
-            } else {
+            if (target === -1) {
                 return Number(Object.keys(states)[Math.floor(Math.random() * Object.keys(states))]);
+            } else {
+                return target;
             }
-        } else {
-            return 0;
         }
     };
     //相殺グループのステート(配列)
@@ -863,15 +868,12 @@
         var nextHigher = this.nextOf(stateId, "higher");
         var nextLower = this.nextOf(stateId, "lower");
         switch (condition) {
-            case "none_random":
-            case "higher_random":
-            case "lower_random":
-                return limit;
-            case "none_rankUp":
             case "higher_rankUp":
             case "higher_rankDown":
             case "higher_state":
+            case "higher_random":
             case "higher_none":
+            case "none_rankUp":
                 if (nextLower) {
                     limit[0] = states[stateId].rank;
                 }
@@ -880,11 +882,12 @@
                 }
                 limit[2] = "equalLow";
                 return limit;
-            case "none_rankDown":
             case "lower_rankUp":
             case "lower_rankDown":
             case "lower_state":
+            case "lower_random":
             case "lower_none":
+            case "none_rankDown":
                 if (nextLower) {
                     limit[0] = states[nextLower].rank;
                 }
@@ -894,6 +897,7 @@
                 limit[2] = "equalHigh";
                 return limit;
             case "none_state":
+            case "none_random":
             case "none_none":
                 nextLower = this.nextOf(stateId, "lower");
                 nextHigher = this.nextOf(stateId, "higher");
@@ -983,7 +987,7 @@
     };
 
     //--------------------
-    //REMOVE DUPLICATION
+    //COUNTERACT
     //--------------------
 
     //特定のステートの付加を無効化するステートが付加されているか(真偽値)
@@ -1014,7 +1018,7 @@
     };
 
     //--------------------
-    //GROUP ELEMENT
+    //ELEMENT
     //--------------------
 
     //代表ステートの付加(処理)
@@ -1062,16 +1066,21 @@
         }
     };
     //ステートの切り替え(処理)
-    Game_Battler.prototype.RSG_change = function (stateId) {
+    Game_Battler.prototype.RSG_change = function (stateId, takeover) {
         if (this.RSG_changeResult(stateId)) {
+            var turns = this._stateTurns[stateId];
+            var result = this.RSG_changeResult(stateId);
             this.eraseState(stateId);
-            this.RSG_addStateWithoutFlag(this.RSG_changeResult(stateId));
+            this.RSG_addStateWithoutFlag(result);
+            if (takeover && RSGM.groupOf(stateId).takeover) {
+                this._stateTurns[result] = turns;
+            }
         }
     };
     //【xFlag,sFlag】発生確率のある切替(処理)
     Game_Battler.prototype.RSG_rateToChange = function (stateId, rate) {
         if (Math.randomInt(100) < rate) {
-            this.RSG_change(stateId);
+            this.RSG_change(stateId, true);
         }
     };
     //一部のフラグを除く共通の処理をまとめたものです。
@@ -1081,13 +1090,13 @@
             var group = RSGM.groupOf(states[i]);
             switch (flagName) {
                 case group.flag:
-                    this.RSG_change(states[i]);
+                    this.RSG_change(states[i], true);
                     break;
                 case group.xFlag:
-                    this.RSG_rateToChange(states[i], group[states[i].xRate])
+                    this.RSG_rateToChange(states[i], group.states[states[i]].xRate)
                     break;
                 case group.sFlag:
-                    this.RSG_rateToChange(states[i], group[states[i].sRate])
+                    this.RSG_rateToChange(states[i], group.states[states[i]].sRate)
                     break;
             }
         }
@@ -1112,7 +1121,7 @@
             if (RSGM.groupOf(states[i]).flag === "turns" &&
                 this.isStateExpired(states[i]) &&
                 $dataStates[states[i]].autoRemovalTiming === timing) {
-                this.RSG_change(states[i]);
+                this.RSG_change(states[i], false);
             }
         }
     };
@@ -1122,7 +1131,7 @@
         for (var i = 0; i < states.length; i++) {
             if (RSGM.groupOf(states[i]).flag === "damage") {
                 if (Math.randomInt(100) < $dataStates[states[i]].chanceByDamage) {
-                    this.RSG_change(states[i]);
+                    this.RSG_change(states[i], true);
                 }
             }
         }
@@ -1133,7 +1142,7 @@
             RSGM.groupOf(state.id).flag === "steps" &&
             this._stateSteps[state.id] > 0 &&
             this._stateSteps[state.id] - 1 === 0) {
-            this.RSG_change(state.id);
+            this.RSG_change(state.id, true);
         }
     };
 
@@ -1251,7 +1260,8 @@
     Game_Battler.prototype.RSG_getValueForLimitOf = function (stateId) {
         var group = RSGM.groupOf(stateId);
         if (group.sFlag === "param") {
-            return this[group.sValue];
+            var sValue = group.sValue.toLowerCase();
+            return this[sValue];
         } else if (group.sFlag === "rateOfHMT") {
             switch (group.sValue) {
                 case "hp":
@@ -1307,7 +1317,7 @@
     //ADDING STATE
     //--------------------
 
-    //特定のステートより弱い同属ステートと、相殺ステートの解除(処理)
+    //特定のステートの付加によって解除されるステートを解除(処理)
     Game_Battler.prototype.RSG_beforeAddingState = function (stateId) {
         var weakers = this.RSG_weakersOf(stateId);
         for (var i = 0; i < weakers.length; i++) {
@@ -1318,7 +1328,7 @@
             }
         }
     };
-    //ステートを付加する前の処理に追加する処理
+    //ステートが付加できない場合は無効化、あるいは有効範囲に合ったステートに変える(処理)
     Game_Battler.prototype.RSG_matchState = function (stateId) {
         if (RSGM.isRSG(stateId) &&
             this.RSG_hasStrongersOf(stateId)) {
@@ -1329,8 +1339,7 @@
         }
         return stateId;
     };
-    //sFlag[addedState]および[addedStateGroup]による判定を避ける形のステート付加
-    //「切替」によるステート付加は、sFlag[addedState]および[addedStateGroup]を作動させません。
+    //既に付加されている他のステートのフラグ作動を避ける形のステート付加(処理)
     Game_Battler.prototype.RSG_addStateWithoutFlag = function (stateId) {
         var match = this.RSG_matchState(stateId);
         this.RSG_beforeAddingState(stateId);
@@ -1343,7 +1352,6 @@
     //--------------------
 
     Game_Battler.prototype.RSG_refresh = function () {
-        //this.RSG_eraseDuplication();
         this.RSG_matchStatesToLimits();
     };
 
@@ -1444,6 +1452,7 @@
         _RSG_Game_Interpreter_pluginCommand.call(this, command, args);
         if (command == "RSG") {
             console.log(RSGM.database);
+            console.log($gameMap);
         }
     };
 
